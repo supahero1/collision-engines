@@ -24,3 +24,14 @@ grid.node_entities = realloc(grid.node_entities, sizeof(struct grid_node_entity)
 
 # benchmarking
 The `test.c` file may be used to benchmark the grid with various settings. On an i5-9600K 3.7GHZ 1 core, 300k objects on an 200kx200k arena with grid resolution 125 results in 60fps, compiled with `-O3 -fomit-frame-pointer`.
+
+# usage
+Look `test.c`. The grid shall be zeroed, then basic members shall be initialised and `grid_init()` shall be called. At this point the grid may be used for collision.
+
+`grid_insert()` inserts a new object with the given AABB and reference that may be a pointer or an index so that the application can map the grid object to it's external object or do anything else. The function returns an index of the created object that may be used to remove it from the grid. Otherwise it is meaningless to the application. Setting `spatial_hash` is meaningless and should not be done.
+
+`grid_update()` will call `grid.onupdate(grid, object)` on every object in the grid. The purpose is to update positions of objects. If it was done when colliding, it could be that a collision would only result in 1 object being informed of the collision, or other weird phenomena.
+
+`grid_collide()` will test all objects for collision. The application MUST NOT update position of the objects, but rather save the new acceleration and/or velocity in an external object (that it can access using `object.ref`) and then apply it in the `onupdate` function.
+
+`grid_query()` will call an application-provided callback on every object that fits within the provided rectangle. It will never call the function with a duplicate object.
