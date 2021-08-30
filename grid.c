@@ -1,120 +1,311 @@
 #include "grid.h"
 
-#include <time.h>
 #include <math.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <string.h>
 
-struct ball {
-  float vx;
-  float vy;
-};
-
-#define AGENTS_NUM 50000
-
-#define COLLISION_STRENGTH 1.0
-#define STARTING_SPEED_MUL 1
-#define RADIUS_DIFF 200
-#define MIN_RADIUS 10.0
-#define MAX_SPEED 2.0
-
-#define GRID_CELL_SIZE 100
-#define GRID_WIDTH 25000
-#define GRID_HEIGHT 25000
-
-struct ball balls[AGENTS_NUM];
-
-int grid_onupdate(struct grid* grid, struct grid_entity* a) {
-  a->pos.x += balls[a->ref].vx;
-	if(a->pos.x - a->pos.w <= 0) {
-		balls[a->ref].vx = fmin(MAX_SPEED, balls[a->ref].vx + 1);
-	} else if(a->pos.x + a->pos.w >= GRID_WIDTH) {
-		balls[a->ref].vx = fmax(-MAX_SPEED, balls[a->ref].vx - 1);
-	}
-	a->pos.y += balls[a->ref].vy;
-	if(a->pos.y - a->pos.h <= 0) {
-		balls[a->ref].vy = fmin(MAX_SPEED, balls[a->ref].vy + 1);
-	} else if(a->pos.y + a->pos.h >= GRID_HEIGHT) {
-		balls[a->ref].vy = fmax(-MAX_SPEED, balls[a->ref].vy - 1);
-	}
-  return 1;
-}
-
-void grid_oncollision(struct grid* grid, struct grid_entity* a, struct grid_entity* b) {
-  const double d = (a->pos.x - b->pos.x) * (a->pos.x - b->pos.x) + (a->pos.y - b->pos.y) * (a->pos.y - b->pos.y);
-  if(d <= (a->pos.w + b->pos.w) * (a->pos.w + b->pos.w)) {
-    const double angle = atan2(a->pos.y - b->pos.y, a->pos.x - b->pos.x);
-    const float a_mass_diff = b->pos.w / a->pos.w;
-    balls[a->ref].vx = fmax(fmin(balls[a->ref].vx + cos(angle) * a_mass_diff * COLLISION_STRENGTH, MAX_SPEED), -MAX_SPEED);
-    balls[a->ref].vy = fmax(fmin(balls[a->ref].vy + sin(angle) * a_mass_diff * COLLISION_STRENGTH, MAX_SPEED), -MAX_SPEED);
-  }
-}
-
-void grid_onnomem(struct grid* grid) {
-  puts("no mem");
-  exit(-1);
-}
-
-uint64_t time_get_time() {
-  struct timespec tp;
-  (void) clock_gettime(CLOCK_REALTIME, &tp);
-  return tp.tv_sec * 1000000000 + tp.tv_nsec;
-}
-
-int main() {
-	srand(time_get_time());
-  
-  struct grid grid = {0};
-  grid.cell_size = GRID_CELL_SIZE;
-  grid.onnomem = grid_onnomem;
-	grid.onupdate = grid_onupdate;
-  grid.oncollision = grid_oncollision;
-  grid.cells_x = GRID_WIDTH / GRID_CELL_SIZE;
-  grid.cells_y = GRID_HEIGHT / GRID_CELL_SIZE;
-  
-  grid_init(&grid);
-	
-  for(int i = 0; i < AGENTS_NUM; ++i) {
-		balls[i].vx = (rand() % (STARTING_SPEED_MUL << 1)) - STARTING_SPEED_MUL;
-		balls[i].vy = (rand() % (STARTING_SPEED_MUL << 1)) - STARTING_SPEED_MUL;
-    float smol = MIN_RADIUS + RADIUS_DIFF;
-    for(int j = 0; j < 100; ++j) {
-      const float r = MIN_RADIUS + (rand() % RADIUS_DIFF);
-      if(r < smol) {
-        smol = r;
-      }
-    }
-		grid_insert(&grid, (struct grid_entity) {
-      .pos = (struct grid_pos) { (((uint32_t) rand() << 16) | (uint32_t) rand()) % GRID_WIDTH, (((uint32_t) rand() << 16) | (uint32_t) rand()) % GRID_HEIGHT, smol, smol },
-      .ref = i
-    });
-	}
-  
-  uint64_t times[50];
-  int tim = 0;
-  int h = 0;
+void grid_init(struct grid* const grid) {
   while(1) {
-    const uint64_t time = time_get_time();
-    grid_update(&grid);
-    grid_collide(&grid);
-    const uint64_t end_time = time_get_time();
-    if(tim == 50) {
-      (void) memmove(times, times + 1, 49 * 8);
-      times[49] = end_time - time;
-    } else {
-      times[tim++] = end_time - time;
+    grid->cells = malloc(sizeof(uint32_t) * grid->cells_x * grid->cells_y);
+    if(grid->cells == NULL) {
+      grid->onnomem(grid);
+      continue;
     }
-    if(++h == 50) {
-      h = 0;
-      uint64_t sum = 0;
-      for(int i = 0; i < 50; ++i) {
-        sum += times[i];
+    break;
+  }
+  (void) memset(grid->cells, 255, sizeof(uint32_t) * grid->cells_x * grid->cells_y);
+  
+  while(1) {
+    grid->opt = calloc((grid->entities_size + 7) >> 3, sizeof(uint8_t));
+    if(grid->opt == NULL) {
+      grid->onnomem(grid);
+      continue;
+    }
+    break;
+  }
+  
+  while(1) {
+    grid->entities = malloc(sizeof(struct grid_entity) * grid->entities_size);
+    if(grid->entities == NULL) {
+      grid->onnomem(grid);
+      continue;
+    }
+    break;
+  }
+  
+  while(1) {
+    grid->node_entities = malloc(sizeof(struct grid_node_entity) * grid->node_entities_size);
+    if(grid->node_entities == NULL) {
+      grid->onnomem(grid);
+      continue;
+    }
+    break;
+  }
+  
+  grid->free_entity = UINT32_MAX;
+  grid->free_node_entity = UINT32_MAX;
+}
+
+static uint32_t grid_get_entity(struct grid* const grid) {
+  if(grid->free_entity != UINT32_MAX) {
+    const uint32_t ret = grid->free_entity;
+    grid->free_entity = grid->entities[ret].spatial_hash;
+    return ret;
+  }
+  if(grid->entities_used == grid->entities_size) {
+    const uint32_t old = (grid->entities_size + 7) >> 3;
+    grid->entities_size = (grid->entities_size << 1) + 1;
+    while(1) {
+      void* const ptr = realloc(grid->entities, sizeof(struct grid_entity) * grid->entities_size);
+      if(ptr == NULL) {
+        grid->onnomem(grid);
+        continue;
       }
-      printf("%lf fps\n", 50000000000.0 / sum );
+      grid->entities = ptr;
+      break;
+    }
+    while(1) {
+      void* const ptr = realloc(grid->opt, sizeof(uint8_t) * ((grid->entities_size + 7) >> 3));
+      if(ptr == NULL) {
+        grid->onnomem(grid);
+        continue;
+      }
+      grid->opt = ptr;
+      (void) memset(grid->opt + old, 0, ((grid->entities_size + 7) >> 3) - old);
+      break;
     }
   }
-  return 0;
+  return grid->entities_used++;
+}
+
+static uint32_t grid_get_node_entity(struct grid* const grid) {
+  if(grid->free_node_entity != UINT32_MAX) {
+    const uint32_t ret = grid->free_node_entity;
+    grid->free_node_entity = grid->node_entities[ret].next;
+    return ret;
+  }
+  if(grid->node_entities_used == grid->node_entities_size) {
+    grid->node_entities_size = (grid->node_entities_size << 1) + 1;
+    while(1) {
+      void* const ptr = realloc(grid->node_entities, sizeof(struct grid_node_entity) * grid->node_entities_size);
+      if(ptr == NULL) {
+        grid->onnomem(grid);
+        continue;
+      }
+      grid->node_entities = ptr;
+      break;
+    }
+  }
+  return grid->node_entities_used++;
+}
+
+static uint_fast16_t clamp(const uint_fast16_t x, const uint_fast16_t min, const uint_fast16_t max) {
+  return x < min ? min : x > max ? max : x;
+}
+
+uint32_t grid_insert(struct grid* const grid, struct grid_entity entity) {
+  const uint_fast16_t min_x = clamp((entity.pos.x - entity.pos.w) / grid->cell_size, 0, grid->cells_x - 1);
+  const uint_fast16_t min_y = clamp((entity.pos.y - entity.pos.h) / grid->cell_size, 0, grid->cells_y - 1);
+  const uint_fast16_t max_x = clamp((entity.pos.x + entity.pos.w) / grid->cell_size, 0, grid->cells_x - 1);
+  const uint_fast16_t max_y = clamp((entity.pos.y + entity.pos.h) / grid->cell_size, 0, grid->cells_y - 1);
+  entity.spatial_hash = ((uint64_t) min_x << 48) | ((uint64_t) min_y << 32) | ((uint64_t) max_x << 16) | (uint64_t) max_y;
+  
+  const uint32_t id = grid_get_entity(grid);
+  grid->entities[id] = entity;
+  
+  for(uint_fast16_t x = min_x; x <= max_x; ++x) {
+    for(uint_fast16_t y = min_y; y <= max_y; ++y) {
+      const uint32_t idx = grid_get_node_entity(grid);
+      grid->node_entities[idx].ref = id;
+      grid->node_entities[idx].next = grid->cells[x * grid->cells_y + y];
+      grid->cells[x * grid->cells_y + y] = idx;
+    }
+  }
+  
+  return id;
+}
+
+static void grid_remove_raw(struct grid* const grid, const uint32_t id, const int preserve) {
+  const uint_fast16_t min_x = grid->entities[id].spatial_hash >> 48;
+  const uint_fast16_t min_y = (grid->entities[id].spatial_hash >> 32) & UINT16_MAX;
+  const uint_fast16_t max_x = (grid->entities[id].spatial_hash >> 16) & UINT16_MAX;
+  const uint_fast16_t max_y = grid->entities[id].spatial_hash & UINT16_MAX;
+  
+  for(uint_fast16_t x = min_x; x <= max_x; ++x) {
+    for(uint_fast16_t y = min_y; y <= max_y; ++y) {
+      for(uint32_t i = grid->cells[x * grid->cells_y + y], prev = UINT32_MAX; i != UINT32_MAX; prev = i, i = grid->node_entities[i].next) {
+        if(grid->node_entities[i].ref != id) {
+          continue;
+        }
+        if(prev == UINT32_MAX) {
+          grid->cells[x * grid->cells_y + y] = grid->node_entities[i].next;
+        } else {
+          grid->node_entities[prev].next = grid->node_entities[i].next;
+        }
+        grid->node_entities[i].next = grid->free_node_entity;
+        grid->free_node_entity = i;
+        break;
+      }
+    }
+  }
+  
+  if(!preserve) {
+    grid->entities[id].spatial_hash = grid->free_entity;
+    grid->entities[id].ref = UINT64_MAX;
+    grid->free_entity = id;
+  }
+}
+
+void grid_remove(struct grid* const grid, const uint32_t id) {
+  grid_remove_raw(grid, id, 0);
+}
+
+void grid_update(struct grid* const grid) {
+  for(uint32_t i = 0; i < grid->entities_used; ++i) {
+    if(grid->entities[i].ref == UINT64_MAX) {
+      continue;
+    }
+    struct grid_entity* const entity = grid->entities + i;
+    if(grid->onupdate(grid, entity) == 0) {
+      continue;
+    }
+    const uint_fast16_t min_x = clamp((entity->pos.x - entity->pos.w) / grid->cell_size, 0, grid->cells_x - 1);
+    const uint_fast16_t min_y = clamp((entity->pos.y - entity->pos.h) / grid->cell_size, 0, grid->cells_y - 1);
+    const uint_fast16_t max_x = clamp((entity->pos.x + entity->pos.w) / grid->cell_size, 0, grid->cells_x - 1);
+    const uint_fast16_t max_y = clamp((entity->pos.y + entity->pos.h) / grid->cell_size, 0, grid->cells_y - 1);
+    const uint64_t spatial_hash = ((uint64_t) min_x << 48) | ((uint64_t) min_y << 32) | ((uint64_t) max_x << 16) | (uint64_t) max_y;
+    if(spatial_hash != entity->spatial_hash) {
+      grid_remove_raw(grid, i, 1);
+      entity->spatial_hash = spatial_hash;
+      for(uint_fast16_t x = min_x; x <= max_x; ++x) {
+        for(uint_fast16_t y = min_y; y <= max_y; ++y) {
+          const uint32_t idx = grid_get_node_entity(grid);
+          grid->node_entities[idx].ref = i;
+          grid->node_entities[idx].next = grid->cells[x * grid->cells_y + y];
+          grid->cells[x * grid->cells_y + y] = idx;
+        }
+      }
+    }
+  }
+}
+
+static void grid_set_opt(struct grid* const grid, const uint32_t idx) {
+  grid->opt[idx >> 3] |= 1u << (idx % 8);
+}
+
+static uint8_t grid_get_opt(struct grid* const grid, const uint32_t idx) {
+  return grid->opt[idx >> 3] & (1u << (idx % 8));
+}
+
+void grid_query(struct grid* const grid, const struct grid_pos* const pos, void (*cb)(struct grid*, struct grid_entity*)) {
+  const uint_fast16_t min_x = clamp((pos->x - pos->w) / grid->cell_size, 0, grid->cells_x - 1);
+  const uint_fast16_t min_y = clamp((pos->y - pos->h) / grid->cell_size, 0, grid->cells_y - 1);
+  const uint_fast16_t max_x = clamp((pos->x + pos->w) / grid->cell_size, 0, grid->cells_x - 1);
+  const uint_fast16_t max_y = clamp((pos->y + pos->h) / grid->cell_size, 0, grid->cells_y - 1);
+  uint32_t min = UINT32_MAX;
+  uint32_t max = 0;
+  for(uint_fast16_t x = min_x; x <= max_x; ++x) {
+    for(uint_fast16_t y = min_y; y <= max_y; ++y) {
+      if(x == min_x || x == max_x || y == min_y || y == max_y) {
+        for(uint32_t i = grid->cells[x * grid->cells_y + y]; i != UINT32_MAX; i = grid->node_entities[i].next) {
+          struct grid_entity* const e = grid->entities + grid->node_entities[i].ref;
+          if(grid_get_opt(grid, grid->node_entities[i].ref) == 0) {
+            grid_set_opt(grid, grid->node_entities[i].ref);
+            if(grid->node_entities[i].ref > max) {
+              max = grid->node_entities[i].ref;
+            }
+            if(grid->node_entities[i].ref < min) {
+              min = grid->node_entities[i].ref;
+            }
+            if(
+              e->pos.x + e->pos.w >= pos->x - pos->w &&
+              e->pos.x - e->pos.w <= pos->x + pos->w &&
+              e->pos.y + e->pos.h >= pos->y - pos->h &&
+              e->pos.y - e->pos.h <= pos->y + pos->h
+            ) {
+              cb(grid, e);
+            }
+          }
+        }
+      } else {
+        for(uint32_t i = grid->cells[x * grid->cells_y + y]; i != UINT32_MAX; i = grid->node_entities[i].next) {
+          if(grid_get_opt(grid, grid->node_entities[i].ref) == 0) {
+            grid_set_opt(grid, grid->node_entities[i].ref);
+            if(grid->node_entities[i].ref > max) {
+              max = grid->node_entities[i].ref;
+            }
+            if(grid->node_entities[i].ref < min) {
+              min = grid->node_entities[i].ref;
+            }
+            cb(grid, grid->entities + grid->node_entities[i].ref);
+          }
+        }
+      }
+    }
+  }
+  if(min != UINT32_MAX) {
+    (void) memset(grid->opt + (min >> 3), 0, sizeof(uint8_t) * ((max - min) >> 3));
+  }
+}
+
+void grid_collide(struct grid* const grid) {
+  for(uint32_t i = 0; i < grid->entities_used; ++i) {
+    if(grid->entities[i].ref == UINT64_MAX) {
+      continue;
+    }
+    struct grid_entity* const entity = grid->entities + i;
+    const uint_fast16_t min_x = entity->spatial_hash >> 48;
+    const uint_fast16_t min_y = (entity->spatial_hash >> 32) & UINT16_MAX;
+    const uint_fast16_t max_x = (entity->spatial_hash >> 16) & UINT16_MAX;
+    const uint_fast16_t max_y = entity->spatial_hash & UINT16_MAX;
+    uint32_t min = UINT32_MAX;
+    uint32_t max = 0;
+    for(uint_fast16_t x = min_x; x <= max_x; ++x) {
+      for(uint_fast16_t y = min_y; y <= max_y; ++y) {
+        if(x == min_x || x == max_x || y == min_y || y == max_y) {
+          for(uint32_t j = grid->cells[x * grid->cells_y + y]; j != UINT32_MAX; j = grid->node_entities[j].next) {
+            if(i == grid->node_entities[j].ref) {
+              continue;
+            }
+            struct grid_entity* const e = grid->entities + grid->node_entities[j].ref;
+            if(grid_get_opt(grid, grid->node_entities[j].ref) == 0 &&
+              e->pos.x + e->pos.w >= entity->pos.x - entity->pos.w &&
+              e->pos.x - e->pos.w <= entity->pos.x + entity->pos.w &&
+              e->pos.y + e->pos.h >= entity->pos.y - entity->pos.h &&
+              e->pos.y - e->pos.h <= entity->pos.y + entity->pos.h
+            ) {
+              grid_set_opt(grid, grid->node_entities[j].ref);
+              if(grid->node_entities[j].ref > max) {
+                max = grid->node_entities[j].ref;
+              }
+              if(grid->node_entities[j].ref < min) {
+                min = grid->node_entities[j].ref;
+              }
+              grid->oncollision(grid, entity, e);
+            }
+          }
+        } else {
+          for(uint32_t j = grid->cells[x * grid->cells_y + y]; j != UINT32_MAX; j = grid->node_entities[j].next) {
+            if(i == grid->node_entities[j].ref) {
+              continue;
+            }
+            struct grid_entity* const e = grid->entities + grid->node_entities[j].ref;
+            if(grid_get_opt(grid, grid->node_entities[j].ref) == 0) {
+              grid_set_opt(grid, grid->node_entities[j].ref);
+              if(grid->node_entities[j].ref > max) {
+                max = grid->node_entities[j].ref;
+              }
+              if(grid->node_entities[j].ref < min) {
+                min = grid->node_entities[j].ref;
+              }
+              grid->oncollision(grid, entity, e);
+            }
+          }
+        }
+      }
+    }
+    if(min != UINT32_MAX) {
+      (void) memset(grid->opt + (min >> 3), 0, sizeof(uint8_t) * ((max - min) >> 3));
+    }
+  }
 }

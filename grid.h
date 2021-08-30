@@ -12,11 +12,7 @@ struct grid_pos {
 
 struct grid_entity {
   struct grid_pos pos;
-  
-  uint32_t collides_with;
-  uint32_t collision_mask;
   uint64_t ref;
-  
   uint64_t spatial_hash;
 };
 
@@ -55,10 +51,6 @@ extern uint32_t grid_insert(struct grid* const, struct grid_entity);
 extern void grid_remove(struct grid* const, const uint32_t);
 
 extern void grid_update(struct grid* const);
-
-extern void grid_set_opt(struct grid* const, const uint32_t);
-
-extern uint8_t grid_get_opt(struct grid* const, const uint32_t);
 
 extern void grid_query(struct grid* const, const struct grid_pos* const, void (*)(struct grid*, struct grid_entity*));
 
