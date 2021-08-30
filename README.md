@@ -11,7 +11,7 @@ The grid is making sure that the same objects aren't collided multiple times, or
 
 Object spatial hash constrains (64bits) limit the maximum amount of cells to 65535. That should be more than enough though.
 
-The grid's origin is always at `(0, 0)`. Only positive width and height may be specified. All objects and positions, including the rectangle viewport given to `grid_query()` have their center at the specified `(x, y)`. Width and height must be half of the real width and height of the AABB, so that `(x - w, y - h)` is the top left corner of the AABB.
+The grid's origin is always at `(0, 0)`. Only positive width and height may be specified. Besides of the grid itself, objects and positions, including the rectangle viewport given to `grid_query()` have their center at the specified `(x, y)`. Width and height must be half of the real width and height of the AABB, so that `(x - w, y - h)` is the top left corner of the AABB.
 
 Over time, if amount of entities varies or their position changes from distributed to localized, it might be worth cleaning up unused memory by quietly doing
 ```c
