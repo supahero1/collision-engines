@@ -99,7 +99,7 @@ static uint32_t grid_get_node_entity(struct grid* const grid) {
   return grid->node_entities_used++;
 }
 
-static uint_fast16_t clamp(const uint_fast16_t x, const uint_fast16_t min, const uint_fast16_t max) {
+static uint_fast16_t clamp(const float x, const float min, const float max) {
   return x < min ? min : x > max ? max : x;
 }
 
@@ -244,7 +244,7 @@ void grid_query(struct grid* const grid, const struct grid_pos* const pos, void 
     }
   }
   if(min != UINT32_MAX) {
-    (void) memset(grid->opt + (min >> 3), 0, sizeof(uint8_t) * ((max - min) >> 3));
+    (void) memset(grid->opt + (min >> 3), 0, sizeof(uint8_t) * ((max - min) >> 3) + 1);
   }
 }
 
@@ -305,7 +305,7 @@ void grid_collide(struct grid* const grid) {
       }
     }
     if(min != UINT32_MAX) {
-      (void) memset(grid->opt + (min >> 3), 0, sizeof(uint8_t) * ((max - min) >> 3));
+      (void) memset(grid->opt + (min >> 3), 0, sizeof(uint8_t) * ((max - min) >> 3) + 1);
     }
   }
 }
