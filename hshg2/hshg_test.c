@@ -7,13 +7,13 @@
 #include <math.h>
 #include <string.h>
 
-#define AGENTS_NUM 300000
+#define AGENTS_NUM 1000000
 
-#define CELLS_SIDE 2048
+#define CELLS_SIDE 8192
 #define AGENT_R 7
-#define CELL_SIZE 16
-#define ARENA_WIDTH 262144
-#define ARENA_HEIGHT 262144
+#define CELL_SIZE 128
+#define ARENA_WIDTH 1048576
+#define ARENA_HEIGHT 1048576
 
 #define LATENCY_NUM 10
 

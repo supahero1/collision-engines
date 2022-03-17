@@ -1,6 +1,6 @@
 # Hierarchical Spatial Hashing Grid
 
-This directory is a dev version of a HSHG implementation. To find out production-suited code, see the `hshg` folder instead.
+This directory is a dev version of a HSHG implementation. To find out production-suited code, see the `hshg` folder instead. Files in this folder might be behind the production code. The only reason for keeping them are useful comments in the code.
 
 Everything that is said here is also true for the production version.
 

@@ -1,5 +1,5 @@
-#define GRID_FAST_MATH_X 1
-#define GRID_FAST_MATH_Y 1
+//#define GRID_FAST_MATH_X 1
+//#define GRID_FAST_MATH_Y 1
 
 #include "grid.h"
 
@@ -14,7 +14,7 @@
 #include <shnet/time.h>
 #include <shnet/error.h>
 
-#define AGENTS_NUM 1000000
+#define AGENTS_NUM 100000
 
 #define COLLISION_STRENGTH 1.0
 
@@ -22,8 +22,8 @@
 #define CELLS_Y 8192
 #define AGENT_R 7
 #define CELL_SIZE 16
-#define ARENA_WIDTH 1000000
-#define ARENA_HEIGHT 1000000
+#define ARENA_WIDTH 131072
+#define ARENA_HEIGHT 131072
 
 #define LATENCY_NUM 5
 
@@ -88,7 +88,7 @@ void collision(struct grid* grid, struct grid_entity* a, struct grid_entity* b) 
 
 
 
-int error_handler(int code) {
+int error_handler(int code, int count) {
   assert(0);
 }
 
