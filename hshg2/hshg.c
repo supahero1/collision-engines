@@ -6,8 +6,6 @@
 #include <string.h>
 #include <assert.h>
 
-#include <stdio.h>
-
 #include <shnet/error.h>
 
 static void hshg_create_grid(struct hshg* const hshg) {
@@ -241,7 +239,7 @@ void hshg_collide(const struct hshg* const hshg) {
 }
 
 void hshg_optimize(struct hshg* const hshg) {
-  struct hshg_entity* const restrict entities = shnet_malloc(sizeof(*hshg->entities) * hshg->entities_size);
+  struct hshg_entity* const entities = shnet_malloc(sizeof(*hshg->entities) * hshg->entities_size);
   assert(entities);
   uint32_t idx = 1;
   for(uint32_t i = 0; i < hshg->grids_len; ++i) {

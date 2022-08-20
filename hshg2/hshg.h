@@ -30,7 +30,7 @@ struct hshg {
   struct hshg_grid* grids;
   
   void (*update)(struct hshg*, uint32_t);
-  void (*collide)(const struct hshg*, const struct hshg_entity* const restrict, const struct hshg_entity* const restrict);
+  void (*collide)(const struct hshg*, const struct hshg_entity* const, const struct hshg_entity* const);
   
   uint32_t cell_div_log;
   uint32_t grids_len;
@@ -45,7 +45,7 @@ extern int  hshg_init(struct hshg* const, const uint32_t, const uint32_t);
 
 extern void hshg_free(struct hshg* const);
 
-extern void hshg_insert(struct hshg* const restrict, const struct hshg_entity* const restrict);
+extern void hshg_insert(struct hshg* const, const struct hshg_entity* const);
 
 extern void hshg_remove(struct hshg* const, const uint32_t);
 

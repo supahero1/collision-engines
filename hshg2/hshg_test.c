@@ -28,7 +28,7 @@ struct ball {
 struct ball balls[AGENTS_NUM];
 
 void update(struct hshg* hshg, uint32_t x) {
-  struct hshg_entity* const restrict a = hshg->entities + x;
+  struct hshg_entity* const a = hshg->entities + x;
   a->x += balls[a->ref].vx;
 	if(a->x < a->r) {
 		++balls[a->ref].vx;
@@ -49,7 +49,7 @@ void update(struct hshg* hshg, uint32_t x) {
 uint32_t maybe_collisions = 0;
 uint32_t collisions = 0;
 
-void collide(const struct hshg* hshg, const struct hshg_entity* const restrict a, const struct hshg_entity* const restrict b) {
+void collide(const struct hshg* hshg, const struct hshg_entity* const a, const struct hshg_entity* const b) {
   const float xd = a->x - b->x;
   const float yd = a->y - b->y;
   const float d = xd * xd + yd * yd;
