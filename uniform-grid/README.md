@@ -1,3 +1,5 @@
+I started rewriting this recently and haven't finished, so this is basically unusable at the moment. Check out older versions of the files here.
+
 # Uniform grid
 
 The grid may be used for other structures such as a Hierarchical Spatial Hashing Grid (HSHG) or as a standalone collision engine. That's because it has support for objects larger than a cell.

@@ -8,12 +8,14 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <shnet/test.h>
+
 struct ball {
   float vx;
   float vy;
 };
 
-#define AGENTS_NUM 50000
+#define AGENTS_NUM 200000
 
 #define COLLISION_STRENGTH 1.0
 #define STARTING_SPEED_MUL 1
@@ -21,9 +23,9 @@ struct ball {
 #define MIN_RADIUS 10.0
 #define MAX_SPEED 2.0
 
-#define GRID_CELL_SIZE 100
-#define GRID_WIDTH 25000
-#define GRID_HEIGHT 25000
+#define GRID_CELL_SIZE 512
+#define GRID_WIDTH 262144
+#define GRID_HEIGHT 262144
 
 struct ball balls[AGENTS_NUM];
 

@@ -15,14 +15,6 @@ struct qt_nodes {
   };
 };
 
-struct qt_node_extended {
-  uint32_t id;
-  float x;
-  float y;
-  float w;
-  float h;
-};
-
 struct qt_node_entity {
   uint32_t entity;
   uint32_t next;
@@ -35,12 +27,17 @@ struct qt_entity {
   };
   float y;
   float r;
+  uint32_t ref:31;
+  uint32_t flag:1;
 };
 
 struct qt {
   struct qt_nodes* nodes;
   struct qt_node_entity* node_entities;
   struct qt_entity* entities;
+
+  void (*update)(struct qt*, uint32_t);
+  void (*collide)(struct qt*, uint32_t, uint32_t);
   
   uint32_t idx;
   
@@ -71,5 +68,9 @@ extern void qt_free(struct qt* const);
 extern uint32_t qt_insert(struct qt* const, const struct qt_entity* const);
 
 extern void qt_remove(struct qt* const, const uint32_t);
+
+extern void qt_update(struct qt* const qt);
+
+extern void qt_collide(struct qt* const qt);
 
 #endif // t5IQm__9iaUzSkVQGRArK__wWsvdTDp_

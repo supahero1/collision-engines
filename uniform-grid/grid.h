@@ -11,9 +11,17 @@ struct grid_pos {
 };
 
 struct grid_entity {
+  union {
+    uint32_t next;
+    uint64_t ref;
+  };
+  uint16_t dead;
+  uint16_t updated;
   struct grid_pos pos;
-  uint64_t ref;
-  uint64_t spatial_hash;
+  uint16_t min_x;
+  uint16_t min_y;
+  uint16_t max_x;
+  uint16_t max_y;
 };
 
 struct grid_node_entity {
@@ -22,14 +30,12 @@ struct grid_node_entity {
 };
 
 struct grid {
-  uint8_t* opt;
   uint32_t* cells;
   struct grid_entity* entities;
   struct grid_node_entity* node_entities;
   
-  void (*onnomem)(struct grid*);
-  int  (*onupdate)(struct grid*, struct grid_entity*);
-  void (*oncollision)(struct grid*, struct grid_entity*, struct grid_entity*);
+  int  (*update)(struct grid*, struct grid_entity*);
+  void (*collide)(struct grid*, struct grid_entity*, struct grid_entity*);
   
   uint16_t cells_x;
   uint16_t cells_y;
@@ -51,8 +57,6 @@ extern uint32_t grid_insert(struct grid* const, struct grid_entity);
 extern void grid_remove(struct grid* const, const uint32_t);
 
 extern void grid_update(struct grid* const);
-
-extern void grid_query(struct grid* const, const struct grid_pos* const, void (*)(struct grid*, struct grid_entity*));
 
 extern void grid_collide(struct grid* const);
 

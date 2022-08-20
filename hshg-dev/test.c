@@ -1,4 +1,4 @@
-#include <shnet/tests.h>
+#include <shnet/test.h>
 
 #include "hshg.h"
 
