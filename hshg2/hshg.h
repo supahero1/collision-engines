@@ -30,7 +30,7 @@ struct hshg {
   struct hshg_grid* grids;
   
   void (*update)(struct hshg*, uint32_t);
-  void (*collide)(const struct hshg*, const struct hshg_entity* const, const struct hshg_entity* const);
+  void (*collide)(const struct hshg*, const struct hshg_entity*, const struct hshg_entity*);
   
   uint32_t cell_div_log;
   uint32_t grids_len;

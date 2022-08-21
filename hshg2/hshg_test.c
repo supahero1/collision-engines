@@ -14,11 +14,11 @@
 
 #define CELLS_SIDE 512
 #define AGENT_R 7
-#define CELL_SIZE 128
-#define ARENA_WIDTH (1048576 >> 2)
-#define ARENA_HEIGHT (1048576 >> 2)
+#define CELL_SIZE 32
+#define ARENA_WIDTH (65536 >> 2)
+#define ARENA_HEIGHT (65536 >> 2)
 
-#define LATENCY_NUM 40
+#define LATENCY_NUM 50
 
 struct ball {
   float vx;
@@ -49,7 +49,7 @@ void update(struct hshg* hshg, uint32_t x) {
 uint32_t maybe_collisions = 0;
 uint32_t collisions = 0;
 
-void collide(const struct hshg* hshg, const struct hshg_entity* const a, const struct hshg_entity* const b) {
+void collide(const struct hshg* hshg, const struct hshg_entity* a, const struct hshg_entity* b) {
   const float xd = a->x - b->x;
   const float yd = a->y - b->y;
   const float d = xd * xd + yd * yd;
@@ -76,26 +76,26 @@ int main() {
   hshg.collide = collide;
   hshg.entities_size = AGENTS_NUM;
   assert(!hshg_init(&hshg, CELLS_SIDE, CELL_SIZE));
-  uint64_t time1 = time_get_time();
+  uint64_t ins_time = time_get_time();
   for(uint32_t i = 0; i < AGENTS_NUM; ++i) {
-    /*float min_r = 999999.0f;
-    for(int j = 0; j < 100; ++j) {
-      float new = AGENT_R + ((float) rand() / RAND_MAX) * 500.0f;
+    float min_r = 999999.0f;
+    for(int j = 0; j < 20; ++j) {
+      float new = AGENT_R + ((float) rand() / RAND_MAX) * 100.0f;
       if(new < min_r) {
         min_r = new;
       }
-    }*/
+    }
     hshg_insert(&hshg, &((struct hshg_entity) {
       .x = ((float) rand() / RAND_MAX) * ARENA_WIDTH,
       .y = ((float) rand() / RAND_MAX) * ARENA_HEIGHT,
-      .r = AGENT_R,
+      .r = min_r,
       .ref = i
     }));
     balls[i].vx = ((float) rand() / RAND_MAX) * 2 - 1;
     balls[i].vy = ((float) rand() / RAND_MAX) * 2 - 1;
   }
-  uint64_t time2 = time_get_time();
-  printf("took %lu ms to insert %d entities\n%u grids\n\n", time_ns_to_ms(time2 - time1), AGENTS_NUM, hshg.grids_len);
+  uint64_t ins_end_time = time_get_time();
+  printf("took %lu ms to insert %d entities\n%u grids\n\n", time_ns_to_ms(ins_end_time - ins_time), AGENTS_NUM, hshg.grids_len);
   
   double upd[LATENCY_NUM];
   double col[LATENCY_NUM];
@@ -141,7 +141,5 @@ int main() {
     }
     i = (i + 1) % LATENCY_NUM;
   }
-  test_end();
-  
-  return 0;
+  assert(0);
 }

@@ -29,11 +29,10 @@ int hshg_init(struct hshg* const hshg, const uint32_t side, const uint32_t size)
   if(hshg->cell_div_log == 0) {
     hshg->cell_div_log = 1;
   }
+  hshg->entities_used = 1;
   if(hshg->entities_size == 0) {
     hshg->entities_size = 1;
-  }
-  hshg->entities_used = 1;
-  if(hshg->entities_size != 0) {
+  } else {
     hshg->entities = shnet_malloc(sizeof(*hshg->entities) * hshg->entities_size);
     if(hshg->entities == NULL) {
       return -1;
