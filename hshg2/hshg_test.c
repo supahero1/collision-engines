@@ -1,3 +1,4 @@
+#define TEST_NO_ERR_HANDLER
 #include <shnet/test.h>
 
 #include "hshg.h"
@@ -15,8 +16,8 @@
 #define CELLS_SIDE 128
 #define AGENT_R 7
 #define CELL_SIZE 128
-#define ARENA_WIDTH 16384
-#define ARENA_HEIGHT 16384
+#define ARENA_WIDTH (1920 * 10)
+#define ARENA_HEIGHT (1080 * 10)
 
 #define LATENCY_NUM 10
 
@@ -67,6 +68,12 @@ void collide(const struct hshg* hshg, const struct hshg_entity* a, const struct 
   }
 }
 
+uint64_t queries = 0;
+
+void query(const struct hshg* hshg, const struct hshg_entity* a) {
+  ++queries;
+}
+
 int main() {
   srand(time_get_time());
   struct hshg hshg = {0};
@@ -75,6 +82,7 @@ int main() {
   puts("");
   hshg.update = update;
   hshg.collide = collide;
+  hshg.query = query;
   hshg.entities_size = AGENTS_NUM;
   assert(!hshg_init(&hshg, CELLS_SIDE, CELL_SIZE));
 
@@ -100,8 +108,9 @@ int main() {
   printf("took %lu ms to insert %d entities\n%u grids\n\n", time_ns_to_ms(ins_end_time - ins_time), AGENTS_NUM, hshg.grids_len);
   
   double upd[LATENCY_NUM];
-  double col[LATENCY_NUM];
   double opt[LATENCY_NUM];
+  double col[LATENCY_NUM];
+  double qry[LATENCY_NUM];
   int i = 0;
   while(1) {
     const uint64_t upd_time = time_get_time();
@@ -110,11 +119,18 @@ int main() {
     hshg_optimize(&hshg);
     const uint64_t col_time = time_get_time();
     hshg_collide(&hshg);
+    const uint64_t qry_time = time_get_time();
+    for(int x = 0; x < 10; ++x) {
+      for(int y = 0; y < 10; ++y) {
+        hshg_query(&hshg, x * 1920, y * 1080, (x + 1) * 1920, (y + 1) * 1080);
+      }
+    }
     const uint64_t end_time = time_get_time();
 
-    upd[i] = (double)(opt_time - upd_time) / 1000000.0f;
-    opt[i] = (double)(col_time - opt_time) / 1000000.0f;
-    col[i] = (double)(end_time - col_time) / 1000000.0f;
+    upd[i] = (double)(opt_time - upd_time) / 1000000.0;
+    opt[i] = (double)(col_time - opt_time) / 1000000.0;
+    col[i] = (double)(qry_time - col_time) / 1000000.0;
+    qry[i] = (double)(end_time - qry_time) / 1000000.0;
 
     if(i + 1 == LATENCY_NUM) {
       double upd_avg = 0;
@@ -134,12 +150,19 @@ int main() {
         col_avg += col[i];
       }
       col_avg /= LATENCY_NUM;
+
+      double qry_avg = 0;
+      for(int i = 0; i < LATENCY_NUM; ++i) {
+        qry_avg += qry[i];
+      }
+      qry_avg /= LATENCY_NUM;
       
-      printf("upd %.2lf ms\nopt %.2lf ms\ncol %.2lf ms\nall %.2lf ms\nattempted collisions %lu\nsucceeded collisions %lu\n",
-        upd_avg, opt_avg, col_avg, upd_avg + opt_avg + col_avg, maybe_collisions, collisions);
+      printf("upd %.2lf ms\nopt %.2lf ms\ncol %.2lf ms\nqry %.2lf ms\nall %.2lf ms\nattempted collisions %lu\nsucceeded collisions %lu\nqueried entities %lu\n",
+        upd_avg, opt_avg, col_avg, qry_avg, upd_avg + opt_avg + col_avg + qry_avg, maybe_collisions, collisions, queries);
 
       maybe_collisions = 0;
       collisions = 0;
+      queries = 0;
     }
     i = (i + 1) % LATENCY_NUM;
   }
