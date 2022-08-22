@@ -12,13 +12,13 @@
 
 #define AGENTS_NUM 50000
 
-#define CELLS_SIDE 512
+#define CELLS_SIDE 128
 #define AGENT_R 7
-#define CELL_SIZE 32
-#define ARENA_WIDTH (65536 >> 2)
-#define ARENA_HEIGHT (65536 >> 2)
+#define CELL_SIZE 128
+#define ARENA_WIDTH 16384
+#define ARENA_HEIGHT 16384
 
-#define LATENCY_NUM 50
+#define LATENCY_NUM 10
 
 struct ball {
   float vx;
@@ -27,7 +27,7 @@ struct ball {
 
 struct ball balls[AGENTS_NUM];
 
-void update(struct hshg* hshg, uint32_t x) {
+void update(struct hshg* hshg, hshg_entity_t x) {
   struct hshg_entity* const a = hshg->entities + x;
   a->x += balls[a->ref].vx;
 	if(a->x < a->r) {
@@ -46,10 +46,11 @@ void update(struct hshg* hshg, uint32_t x) {
   hshg_move(hshg, x);
 }
 
-uint32_t maybe_collisions = 0;
-uint32_t collisions = 0;
+uint64_t maybe_collisions = 0;
+uint64_t collisions = 0;
 
 void collide(const struct hshg* hshg, const struct hshg_entity* a, const struct hshg_entity* b) {
+  (void) hshg;
   const float xd = a->x - b->x;
   const float yd = a->y - b->y;
   const float d = xd * xd + yd * yd;
@@ -76,11 +77,12 @@ int main() {
   hshg.collide = collide;
   hshg.entities_size = AGENTS_NUM;
   assert(!hshg_init(&hshg, CELLS_SIDE, CELL_SIZE));
+
   uint64_t ins_time = time_get_time();
-  for(uint32_t i = 0; i < AGENTS_NUM; ++i) {
+  for(hshg_entity_t i = 0; i < AGENTS_NUM; ++i) {
     float min_r = 999999.0f;
     for(int j = 0; j < 20; ++j) {
-      float new = AGENT_R + ((float) rand() / RAND_MAX) * 100.0f;
+      float new = AGENT_R + ((float) rand() / RAND_MAX) * 121.0f;
       if(new < min_r) {
         min_r = new;
       }
@@ -133,7 +135,7 @@ int main() {
       }
       col_avg /= LATENCY_NUM;
       
-      printf("upd %.2lf ms\nopt %.2lf ms\ncol %.2lf ms\nall %.2lf ms\nattempted collisions %u\nsucceeded collisions %u\n",
+      printf("upd %.2lf ms\nopt %.2lf ms\ncol %.2lf ms\nall %.2lf ms\nattempted collisions %lu\nsucceeded collisions %lu\n",
         upd_avg, opt_avg, col_avg, upd_avg + opt_avg + col_avg, maybe_collisions, collisions);
 
       maybe_collisions = 0;
