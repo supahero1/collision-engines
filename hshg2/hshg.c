@@ -203,28 +203,38 @@ void hshg_collide(const struct hshg* const hshg) {
     const struct hshg_entity* const entity = hshg->entities + i;
     if(entity->cell == hshg_cell_sq_max) continue;
     const struct hshg_grid* grid = hshg->grids + entity->grid;
-    for(hshg_entity_t j = entity->next; j != 0; j = hshg->entities[j].next) {
-      hshg->collide(hshg, entity, hshg->entities + j);
+    for(hshg_entity_t j = entity->next; j != 0;) {
+      const struct hshg_entity* const ent = hshg->entities + j;
+      hshg->collide(hshg, entity, ent);
+      j = ent->next;
     }
     hshg_cell_t cell_x = entity->cell & grid->cells_mask;
     hshg_cell_t cell_y = entity->cell >> grid->cells_log;
     if(cell_x != 0) {
-      for(hshg_entity_t j = grid->cells[entity->cell - 1]; j != 0; j = hshg->entities[j].next) {
-        hshg->collide(hshg, entity, hshg->entities + j);
+      for(hshg_entity_t j = grid->cells[entity->cell - 1]; j != 0;) {
+        const struct hshg_entity* const ent = hshg->entities + j;
+        hshg->collide(hshg, entity, ent);
+        j = ent->next;
       }
       if(cell_y != grid->cells_mask) {
-        for(hshg_entity_t j = grid->cells[entity->cell + grid->cells_side - 1]; j != 0; j = hshg->entities[j].next) {
-          hshg->collide(hshg, entity, hshg->entities + j);
+        for(hshg_entity_t j = grid->cells[entity->cell + grid->cells_side - 1]; j != 0;) {
+          const struct hshg_entity* const ent = hshg->entities + j;
+          hshg->collide(hshg, entity, ent);
+          j = ent->next;
         }
       }
     }
     if(cell_y != grid->cells_mask) {
-      for(hshg_entity_t j = grid->cells[entity->cell + grid->cells_side]; j != 0; j = hshg->entities[j].next) {
-        hshg->collide(hshg, entity, hshg->entities + j);
+      for(hshg_entity_t j = grid->cells[entity->cell + grid->cells_side]; j != 0;) {
+        const struct hshg_entity* const ent = hshg->entities + j;
+        hshg->collide(hshg, entity, ent);
+        j = ent->next;
       }
       if(cell_x != grid->cells_mask) {
-        for(hshg_entity_t j = grid->cells[entity->cell + grid->cells_side + 1]; j != 0; j = hshg->entities[j].next) {
-          hshg->collide(hshg, entity, hshg->entities + j);
+        for(hshg_entity_t j = grid->cells[entity->cell + grid->cells_side + 1]; j != 0;) {
+          const struct hshg_entity* const ent = hshg->entities + j;
+          hshg->collide(hshg, entity, ent);
+          j = ent->next;
         }
       }
     }
@@ -244,8 +254,10 @@ void hshg_collide(const struct hshg* const hshg) {
       max_cell_y >>= hshg->cell_div_log;
       for(hshg_cell_t cur_y = cell_y; cur_y <= max_cell_y; ++cur_y) {
         for(hshg_cell_t cur_x = cell_x; cur_x <= max_cell_x; ++cur_x) {
-          for(hshg_entity_t j = grid->cells[(hshg_cell_sq_t) cur_x | (cur_y << grid->cells_log)]; j != 0; j = hshg->entities[j].next) {
-            hshg->collide(hshg, entity, hshg->entities + j);
+          for(hshg_entity_t j = grid->cells[(hshg_cell_sq_t) cur_x | (cur_y << grid->cells_log)]; j != 0;) {
+            const struct hshg_entity* const ent = hshg->entities + j;
+            hshg->collide(hshg, entity, ent);
+            j = ent->next;
           }
         }
       }

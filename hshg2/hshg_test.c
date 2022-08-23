@@ -13,13 +13,15 @@
 
 #define AGENTS_NUM 50000
 
-#define CELLS_SIDE 128
+#define CELLS_SIDE 512
 #define AGENT_R 7
 #define CELL_SIZE 128
-#define ARENA_WIDTH (1920 * 10)
-#define ARENA_HEIGHT (1080 * 10)
+#define ARENA_WIDTH 22500
+#define ARENA_HEIGHT 22500
 
-#define LATENCY_NUM 10
+#define LATENCY_NUM 20
+
+#define SINGLE_LAYER 0
 
 struct ball {
   float vx;
@@ -59,12 +61,10 @@ void collide(const struct hshg* hshg, const struct hshg_entity* a, const struct 
   if(d <= (a->r + b->r) * (a->r + b->r)) {
     ++collisions;
     const float angle = atan2f(yd, xd);
-    const float a_mass_diff = b->r / a->r;
-    const float b_mass_diff = a->r / b->r;
-    balls[a->ref].vx += cosf(angle) * a_mass_diff;
-    balls[a->ref].vy += sinf(angle) * a_mass_diff;
-    balls[b->ref].vx -= cosf(angle) * b_mass_diff;
-    balls[b->ref].vy -= sinf(angle) * b_mass_diff;
+    balls[a->ref].vx += cosf(angle);
+    balls[a->ref].vy += sinf(angle);
+    balls[b->ref].vx -= cosf(angle);
+    balls[b->ref].vy -= sinf(angle);
   }
 }
 
@@ -88,21 +88,25 @@ int main() {
 
   uint64_t ins_time = time_get_time();
   for(hshg_entity_t i = 0; i < AGENTS_NUM; ++i) {
+#if SINGLE_LAYER == 0
     float min_r = 999999.0f;
-    for(int j = 0; j < 20; ++j) {
-      float new = AGENT_R + ((float) rand() / RAND_MAX) * 121.0f;
+    for(int j = 0; j < 30; ++j) {
+      float new = AGENT_R + ((float) rand() / RAND_MAX) * 300.0f;
       if(new < min_r) {
         min_r = new;
       }
     }
+#else
+    float min_r = AGENT_R;
+#endif
     hshg_insert(&hshg, &((struct hshg_entity) {
       .x = ((float) rand() / RAND_MAX) * ARENA_WIDTH,
       .y = ((float) rand() / RAND_MAX) * ARENA_HEIGHT,
       .r = min_r,
       .ref = i
     }));
-    balls[i].vx = ((float) rand() / RAND_MAX) * 2 - 1;
-    balls[i].vy = ((float) rand() / RAND_MAX) * 2 - 1;
+    balls[i].vx = ((float) rand() / RAND_MAX) * 8 - 4;
+    balls[i].vy = ((float) rand() / RAND_MAX) * 8 - 4;
   }
   uint64_t ins_end_time = time_get_time();
   printf("took %lu ms to insert %d entities\n%u grids\n\n", time_ns_to_ms(ins_end_time - ins_time), AGENTS_NUM, hshg.grids_len);

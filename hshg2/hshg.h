@@ -4,15 +4,15 @@
 #include <stdint.h>
 
 #ifndef hshg_entity_t
-#define hshg_entity_t  uint16_t
+#define hshg_entity_t  uint32_t
 #endif
 
 #ifndef hshg_cell_t
-#define hshg_cell_t    uint8_t
+#define hshg_cell_t    uint16_t
 #endif
 
 #ifndef hshg_cell_sq_t
-#define hshg_cell_sq_t uint16_t
+#define hshg_cell_sq_t uint32_t
 #endif
 
 #ifndef hshg_pos_t
