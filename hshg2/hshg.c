@@ -400,6 +400,18 @@ void hshg_query(const struct hshg* const hshg, const hshg_pos_t _x1, const hshg_
   const struct hshg_grid* grid = hshg->grids;
   uint8_t i = 0;
   while(1) {
+    if(start_x != 0) {
+      --start_x;
+    }
+    if(start_y != 0) {
+      --start_y;
+    }
+    if(end_x != grid->cells_mask) {
+      ++end_x;
+    }
+    if(end_y != grid->cells_mask) {
+      ++end_y;
+    }
     for(hshg_cell_t y = start_y; y <= end_y; ++y) {
       for(hshg_cell_t x = start_x; x <= end_x; ++x) {
         for(hshg_entity_t j = grid->cells[(hshg_cell_sq_t) x | (y << grid->cells_log)]; j != 0;) {
