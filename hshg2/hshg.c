@@ -400,20 +400,12 @@ void hshg_query(const struct hshg* const hshg, const hshg_pos_t _x1, const hshg_
   const struct hshg_grid* grid = hshg->grids;
   uint8_t i = 0;
   while(1) {
-    if(start_x != 0) {
-      --start_x;
-    }
-    if(start_y != 0) {
-      --start_y;
-    }
-    if(end_x != grid->cells_mask) {
-      ++end_x;
-    }
-    if(end_y != grid->cells_mask) {
-      ++end_y;
-    }
-    for(hshg_cell_t y = start_y; y <= end_y; ++y) {
-      for(hshg_cell_t x = start_x; x <= end_x; ++x) {
+    const hshg_cell_t s_x = start_x != 0 ? start_x - 1 : start_x;
+    const hshg_cell_t s_y = start_y != 0 ? start_y - 1 : start_y;
+    const hshg_cell_t e_x = end_x != grid->cells_mask ? end_x + 1 : end_x;
+    const hshg_cell_t e_y = end_y != grid->cells_mask ? end_y + 1 : end_y;
+    for(hshg_cell_t y = s_y; y <= e_y; ++y) {
+      for(hshg_cell_t x = s_x; x <= e_x; ++x) {
         for(hshg_entity_t j = grid->cells[(hshg_cell_sq_t) x | (y << grid->cells_log)]; j != 0;) {
           const struct hshg_entity* const entity = hshg->entities + j;
           if(entity->x + entity->r >= _x1 && entity->x - entity->r <= _x2 && entity->y + entity->r >= _y1 && entity->y - entity->r <= _y2) {

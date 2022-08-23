@@ -153,21 +153,22 @@ static void qt_gather_entities(struct qt* const qt, struct qt_node* const node) 
   if(node->leaf) {
     uint32_t i = node->head;
     while(i != 0) {
-      const struct qt_node_entity* const ent = qt->node_entities + i;
+      struct qt_node_entity* const ent = qt->node_entities + i;
       uint32_t j = qt->node_entities[qt->idx].next;
       uint32_t k = 0;
       while(j != 0) {
         if(ent->entity == qt->node_entities[j].entity) {
+          const uint32_t next = ent->next;
           qt_return_node_entity(qt, i);
+          i = next;
           goto next;
         }
         k = j;
         j = qt->node_entities[j].next;
       }
       qt->node_entities[k].next = i;
-      const uint32_t next = qt->node_entities[i].next;
-      qt->node_entities[i].next = 0;
-      i = next;
+      i = ent->next;
+      ent->next = 0;
       next:;
     }
   } else {
@@ -175,6 +176,7 @@ static void qt_gather_entities(struct qt* const qt, struct qt_node* const node) 
     qt_gather_entities(qt, qt->nodes[node->head].nodes + 1);
     qt_gather_entities(qt, qt->nodes[node->head].nodes + 2);
     qt_gather_entities(qt, qt->nodes[node->head].nodes + 3);
+    qt_return_node(qt, node->head);
   }
 }
 
@@ -198,8 +200,9 @@ static uint32_t qt_remove_(struct qt* const qt, struct qt_node* const node, cons
         } else {
           qt->node_entities[j].next = ent->next;
         }
+        j = ent->next;
         qt_return_node_entity(qt, i);
-        i = ent->next;
+        i = j;
         while(i != 0) {
           ++k;
           i = qt->node_entities[i].next;
@@ -212,9 +215,9 @@ static uint32_t qt_remove_(struct qt* const qt, struct qt_node* const node, cons
     return k;
   }
   const struct qt_entity* const ent = qt->entities + qt->idx;
-  uint32_t total = 0;
   w *= 0.5f;
   h *= 0.5f;
+  uint32_t total = 0;
   if(qt_within(ent->x, ent->y, ent->r, ent->r, x, y, w, h)) {
     total += qt_remove_(qt, qt->nodes[node->head].nodes + 0, x, y, w, h);
   }
@@ -241,39 +244,65 @@ static uint32_t qt_remove_(struct qt* const qt, struct qt_node* const node, cons
 
 void qt_remove(struct qt* const qt, const uint32_t idx) {
   qt->idx = idx;
-  qt_remove_(qt, qt->nodes->nodes, qt->x, qt->y, qt->w, qt->h);
+  (void) qt_remove_(qt, qt->nodes->nodes, qt->x, qt->y, qt->w, qt->h);
   qt_return_entity(qt, idx);
 }
 
-static void qt_update_(struct qt* const qt, struct qt_node* const node, const float x, const float y, float w, float h) {
+static uint32_t qt_update_(struct qt* const qt, struct qt_node* const node, const float x, const float y, float w, float h) {
   if(node->leaf) {
     uint32_t i = node->head;
+    uint32_t j = 0;
+    uint32_t k = 0;
     while(i != 0) {
+      ++k;
       struct qt_node_entity* const node_entity = qt->node_entities + i;
       struct qt_entity* const entity = qt->entities + node_entity->entity;
-      if(entity->flag == 0) {
-        entity->flag = 1;
+      //if(entity->flag == 0) {
+      //  entity->flag = 1;
         qt->update(qt, i);
-      }
+      //}
       if(qt_completely_within(entity->x, entity->y, entity->r, entity->r, x, y, w, h)) continue;
       qt->idx = node_entity->entity;
       qt_insert_(qt, qt->nodes->nodes, qt->x, qt->y, qt->w, qt->h);
       if(!qt_within(entity->x, entity->y, entity->r, entity->r, x, y, w, h)) {
-        
+        if(j == 0) {
+          node->head = node_entity->next;
+        } else {
+          qt->node_entities[j].next = node_entity->next;
+        }
+        const uint32_t next = node_entity->next;
+        qt_return_node_entity(qt, i);
+        i = next;
+        --k;
+      } else {
+        j = i;
+        i = node_entity->next;
       }
     }
-  } else {
-    w *= 0.5f;
-    h *= 0.5f;
-    qt_update_(qt, qt->nodes[node->head].nodes + 0, x, y, w, h);
-    qt_update_(qt, qt->nodes[node->head].nodes + 1, x, y + h, w, h);
-    qt_update_(qt, qt->nodes[node->head].nodes + 2, x + w, y, w, h);
-    qt_update_(qt, qt->nodes[node->head].nodes + 3, x + w, y + h, w, h);
+    return k;
   }
+  w *= 0.5f;
+  h *= 0.5f;
+  uint32_t total = 0;
+  total += qt_update_(qt, qt->nodes[node->head].nodes + 0, x, y, w, h);
+  total += qt_update_(qt, qt->nodes[node->head].nodes + 1, x, y + h, w, h);
+  total += qt_update_(qt, qt->nodes[node->head].nodes + 2, x + w, y, w, h);
+  total += qt_update_(qt, qt->nodes[node->head].nodes + 3, x + w, y + h, w, h);
+  if(total <= 4) {
+    qt->idx = 0;
+    qt->node_entities->next = 0;
+    qt_gather_entities(qt, qt->nodes[node->head].nodes + 0);
+    qt_gather_entities(qt, qt->nodes[node->head].nodes + 1);
+    qt_gather_entities(qt, qt->nodes[node->head].nodes + 2);
+    qt_gather_entities(qt, qt->nodes[node->head].nodes + 3);
+    node->head = qt->node_entities->next;
+    node->leaf = 1;
+  }
+  return total;
 }
 
 void qt_update(struct qt* const qt) {
-  qt_update_(qt, qt->nodes->nodes, qt->x, qt->y, qt->w, qt->h);
+  (void) qt_update_(qt, qt->nodes->nodes, qt->x, qt->y, qt->w, qt->h);
 }
 
 static void qt_collide_(struct qt* const qt, struct qt_node* const node) {
